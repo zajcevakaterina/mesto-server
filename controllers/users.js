@@ -1,44 +1,74 @@
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const User = require('../models/user');
+const BadReqErr = require('../errors/bad-request-err');
+const NotFoundErr = require('../errors/not-found-error');
+const AuthErr = require('../errors/auth-error');
 
-const getAllUsers = (req, res) => User.find({})
+const { NODE_ENV, JWT_SECRET } = process.env;
+
+const getAllUsers = (req, res, next) => User.find({})
   .then((users) => {
     if (!users) {
-      res.status(404).send({ message: 'Пользователи не найдены' });
-      return;
+      throw new NotFoundErr({ message: 'Пользователи не найдены' });
     }
     res.status(200).send({ data: users });
   })
-  .catch(() => {
-    res.status(500).send({ message: 'На сервере произошла ошибка' });
-  });
+  .catch(next);
 
-const getUserById = (req, res) => User.findById(req.params.id)
+const getUserById = (req, res, next) => User.findById(req.params.id)
   .then((user) => {
     if (!user) {
-      res.status(404).send({ message: 'Нет пользователя с таким id' });
-      return;
+      throw new NotFoundErr({ message: 'Нет пользователя с таким id' });
     }
     res.status(200).send(user);
   })
-  .catch(() => {
-    res.status(500).send({ message: 'На сервере произошла ошибка' });
-  });
+  .catch(next);
 
-const createUser = (req, res) => {
-  const { name, about, avatar } = req.body;
-  return User.create({ name, about, avatar })
+const createUser = (req, res, next) => {
+  const {
+    name, about, avatar, email, password,
+  } = req.body;
+  bcrypt
+    .hash(password, 10)
+    .then((hash) => User.create({
+      name,
+      about,
+      avatar,
+      email,
+      password: hash,
+    }))
     .then((user) => res.status(200).send(user))
     .catch((error) => {
       if (error._message === 'user validation failed') {
-        res.status(400).send({ message: error.message });
-        return;
+        throw new BadReqErr({ message: error.message });
+      } else {
+        next(error);
       }
-      res.status(500).send({ message: 'На сервере произошла ошибка' });
-    });
+    })
+    .catch(next);
+};
+
+const login = (req, res, next) => {
+  const {
+    email, password,
+  } = req.body;
+
+  return User.findUserByCredentials(email, password)
+    .then((user) => {
+      const token = jwt.sign({ _id: user._id },
+        NODE_ENV === 'production' ? JWT_SECRET : 'very-secret-key', { expiresIn: '7d' });
+      res.send({ jwt: token });
+    })
+    .catch((err) => {
+      throw new AuthErr({ message: err.message });
+    })
+    .catch(next);
 };
 
 module.exports = {
   getAllUsers,
   getUserById,
   createUser,
+  login,
 };

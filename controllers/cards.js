@@ -1,47 +1,49 @@
 const Card = require('../models/card');
+const NotFoundErr = require('../errors/not-found-error');
+const BadReqErr = require('../errors/bad-request-err');
+const ServerError = require('../errors/server-error');
+const ForbiddenErr = require('../errors/forbidden-error');
 
-const getCards = (req, res) => Card.find({})
+const getCards = (req, res, next) => Card.find({})
   .then((cards) => {
     if (!cards) {
-      res.status(404).send({ message: 'Карточки не найдены' });
-      return;
+      throw new NotFoundErr({ message: 'Карточки не найдены' });
     }
-
     res.status(200).send({ data: cards });
   })
-  .catch(() => {
-    res.status(500).send({ message: 'На сервере произошла ошибка' });
-  });
+  .catch(next);
 
-const createCard = (req, res) => {
+const createCard = (req, res, next) => {
   const { name, link } = req.body;
   const { _id } = req.user;
   return Card.create({ name, link, owner: _id })
     .then((card) => res.status(200).send(card))
     .catch((error) => {
       if (error._message === 'card validation failed') {
-        res.status(400).send({ message: error.message });
-        return;
+        throw new BadReqErr({ message: error.message });
       }
-      res.status(500).send({ message: 'На сервере произошла ошибка' });
-    });
+      throw new ServerError();
+    })
+    .catch(next);
 };
-
-const deleteCard = (req, res) => Card.deleteOne({ _id: req.params.id })
-  .then((response) => {
-    if (response.deletedCount === 1) {
-      res.status(200).send({ message: 'Карточка удалена' });
-      return;
-    }
-    res.status(400).send({ message: 'Произошла ошибка' });
-  })
-  .catch((error) => {
-    if (!error.messageFormat) {
-      res.status(404).send({ message: 'Карточка не найдена' });
-      return;
-    }
-    res.status(500).send({ message: 'На сервере произошла ошибка' });
-  });
+const deleteCard = (req, res, next) => {
+  Card.findById(req.params.id)
+    .then((card) => {
+      if (card.owner.toString() !== req.user._id) {
+        throw new ForbiddenErr({ message: 'Удалять можно только свои карточки' });
+      }
+      Card.findByIdAndDelete(req.params.id)
+        .then(() => res.status(200).send({ message: 'Карточка удалена' }))
+        .catch(next);
+    })
+    .catch((error) => {
+      if (!error.messageFormat) {
+        throw new NotFoundErr({ message: 'Карточка не найдена' });
+      }
+      throw new ServerError();
+    })
+    .catch(next);
+};
 
 module.exports = {
   getCards,

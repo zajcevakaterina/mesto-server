@@ -1,11 +1,22 @@
+require('dotenv').config();
 const express = require('express');
-const path = require('path');
+const rateLimit = require('express-rate-limit');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
+const { celebrate, Joi, errors } = require('celebrate');
 const cardsRouter = require('./routes/cards');
 const usersRouter = require('./routes/users');
+const { createUser, login } = require('./controllers/users');
+const auth = require('./middlewares/auth');
+const { requestLogger, errorLogger } = require('./middlewares/logger.js');
+const NotFoundErr = require('./errors/not-found-error');
 
 const app = express();
+
+const limiter = rateLimit({
+  windowMs: 1 * 60 * 1000,
+  max: 100,
+});
 
 mongoose.connect('mongodb://localhost:27017/mestodb', {
   useNewUrlParser: true,
@@ -13,20 +24,49 @@ mongoose.connect('mongodb://localhost:27017/mestodb', {
   useFindAndModify: false,
 });
 
+app.use(limiter);
 app.use(bodyParser.json());
 
-app.use(express.static(path.join(__dirname, 'public')));
-app.use((req, res, next) => {
-  req.user = {
-    _id: '5f6b97de603ad24b7ce33014', // вставьте сюда _id созданного в предыдущем пункте пользователя
-  };
+app.use(requestLogger);
 
-  next();
+const userJoiSchema = {
+  body: Joi.object().keys({
+    email: Joi.string().required().email(),
+    password: Joi.string().required().min(6),
+  }),
+};
+
+app.get('/crash-test', () => {
+  setTimeout(() => {
+    throw new Error('Сервер сейчас упадёт');
+  }, 0);
 });
+
+app.post('/signup', celebrate(userJoiSchema), createUser);
+
+app.post('/signin', celebrate(userJoiSchema), login);
+
+app.use(auth);
 
 app.use(cardsRouter);
 app.use(usersRouter);
-app.all('*', (req, res) => res.status(404).send({ message: 'Запрашиваемый ресурс не найден' }));
+app.all('*', (req, res, next) => {
+  next(new NotFoundErr({ message: 'Запрашиваемый ресурс не найден' }));
+});
+
+app.use(errorLogger);
+
+// обработчик celebtate для ошибок
+app.use(errors());
+
+app.use((err, req, res, next) => {
+  if (err.status) {
+    res.status(err.status).send({ message: err.message });
+    return;
+  }
+  res.status(500).send({ message: `К сожалению на сервере произошла ошибка: ${err.message}` });
+  next();
+});
 
 const { PORT = 3000 } = process.env;
 

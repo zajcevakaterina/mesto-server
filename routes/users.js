@@ -1,10 +1,13 @@
 const usersRouter = require('express').Router();
-const { getAllUsers, getUserById, createUser } = require('../controllers/users');
+const { celebrate, Joi } = require('celebrate');
+const { getAllUsers, getUserById } = require('../controllers/users');
 
-usersRouter.get('/users/:id', getUserById);
+usersRouter.get('/users/:id', celebrate({
+  params: Joi.object().keys({
+    userId: Joi.string().required().length(24).hex(),
+  }),
+}), getUserById);
 
 usersRouter.get('/users', getAllUsers);
-
-usersRouter.post('/users', createUser);
 
 module.exports = usersRouter;
