@@ -1,6 +1,6 @@
 require('dotenv').config();
 const express = require('express');
-const cors = require('cors');
+// const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
@@ -28,7 +28,7 @@ mongoose.connect('mongodb://localhost:27017/mestodb', {
 
 app.use(limiter);
 
-app.use(cors());
+// app.use(cors());
 
 app.use(bodyParser.json());
 
@@ -61,7 +61,7 @@ app.all('*', (req, res, next) => {
 
 app.use(errorLogger);
 
-// обработчик celebtate для ошибок
+// обработчик celebrate для ошибок
 app.use(errors());
 
 app.use((err, req, res, next) => {
