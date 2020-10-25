@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
@@ -14,8 +15,9 @@ const NotFoundErr = require('./errors/not-found-error');
 const app = express();
 
 const limiter = rateLimit({
-  windowMs: 1 * 60 * 1000,
+  windowMs: 15 * 60 * 1000,
   max: 100,
+  message: 'Пожалуйста, попробуйте позже',
 });
 
 mongoose.connect('mongodb://localhost:27017/mestodb', {
@@ -25,6 +27,9 @@ mongoose.connect('mongodb://localhost:27017/mestodb', {
 });
 
 app.use(limiter);
+
+app.use(cors());
+
 app.use(bodyParser.json());
 
 app.use(requestLogger);
@@ -42,7 +47,7 @@ app.get('/crash-test', () => {
   }, 0);
 });
 
-app.post('/signup', celebrate(userJoiSchema), createUser);
+app.post('/signup', celebrate(userJoiSchema).unknown(true), createUser);
 
 app.post('/signin', celebrate(userJoiSchema), login);
 

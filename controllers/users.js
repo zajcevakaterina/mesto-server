@@ -1,9 +1,10 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/user');
-const BadReqErr = require('../errors/bad-request-err');
 const NotFoundErr = require('../errors/not-found-error');
 const AuthErr = require('../errors/auth-error');
+const { defaultName, defaultAbout, defaultAvatar } = require('../utils/userData');
+const ConflictError = require('../errors/conflict-error');
 
 const { NODE_ENV, JWT_SECRET } = process.env;
 
@@ -32,20 +33,18 @@ const createUser = (req, res, next) => {
   bcrypt
     .hash(password, 10)
     .then((hash) => User.create({
-      name,
-      about,
-      avatar,
+      name: name || defaultName,
+      about: about || defaultAbout,
+      avatar: avatar || defaultAvatar,
       email,
       password: hash,
     }))
-    .then((user) => res.status(200).send(user))
-    .catch((error) => {
-      if (error._message === 'user validation failed') {
-        throw new BadReqErr({ message: error.message });
-      } else {
-        next(error);
-      }
+    .catch((err) => {
+      if (err.name === 'MongoError' && err.code === 11000) {
+        throw new ConflictError({ message: 'Пользователь с таким email уже зарегистрирован' });
+      } else next(err);
     })
+    .then((user) => res.send({ message: `Пользователь c email ${user.email} успешно зарегистрирован` }))
     .catch(next);
 };
 
