@@ -57,7 +57,7 @@ const login = (req, res, next) => {
     .then((user) => {
       const token = jwt.sign({ _id: user._id },
         NODE_ENV === 'production' ? JWT_SECRET : 'very-secret-key', { expiresIn: '7d' });
-      res.send({ jwt: token });
+      res.send({ token });
     })
     .catch((err) => {
       throw new AuthErr({ message: err.message });
