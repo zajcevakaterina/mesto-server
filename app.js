@@ -47,7 +47,7 @@ app.get('/crash-test', () => {
   }, 0);
 });
 
-app.post('/signup', celebrate(userJoiSchema).unknown(true), createUser);
+app.post('/signup', celebrate(userJoiSchema), createUser);
 
 app.post('/signin', celebrate(userJoiSchema), login);
 
