@@ -1,3 +1,4 @@
+const { NODE_ENV, JWT_SECRET } = process.env;
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/user');
@@ -5,8 +6,6 @@ const NotFoundErr = require('../errors/not-found-error');
 const AuthErr = require('../errors/auth-error');
 const { defaultName, defaultAbout, defaultAvatar } = require('../utils/userData');
 const ConflictError = require('../errors/conflict-error');
-
-const { NODE_ENV, JWT_SECRET } = process.env;
 
 const getAllUsers = (req, res, next) => User.find({})
   .then((users) => {
