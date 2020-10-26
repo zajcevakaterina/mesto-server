@@ -4,7 +4,7 @@ const { getAllUsers, getUserById, getUserByToken } = require('../controllers/use
 
 usersRouter.get('/users/:id', celebrate({
   params: Joi.object().keys({
-    userId: Joi.string().required().length(24).hex(),
+    id: Joi.string().required().length(24).hex(),
   }),
 }), getUserById);
 
