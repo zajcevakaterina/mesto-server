@@ -65,9 +65,22 @@ const login = (req, res, next) => {
     .catch(next);
 };
 
+const getUserByToken = (req, res, next) => {
+  User.findById(req.user._id)
+    .then((user) => {
+      if (!user) {
+        throw new NotFoundErr({ message: 'Пользователь не найден' });
+      } else {
+        res.send(user);
+      }
+    })
+    .catch(next);
+};
+
 module.exports = {
   getAllUsers,
   getUserById,
+  getUserByToken,
   createUser,
   login,
 };
