@@ -4,8 +4,13 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/user');
 const NotFoundErr = require('../errors/not-found-error');
 const AuthErr = require('../errors/auth-error');
-const { defaultName, defaultAbout, defaultAvatar } = require('../utils/userData');
+const {
+  defaultName,
+  defaultAbout,
+  defaultAvatar,
+} = require('../utils/userData');
 const ConflictError = require('../errors/conflict-error');
+const BadReqErr = require('../errors/bad-request-err');
 
 const getAllUsers = (req, res, next) => User.find({})
   .then((users) => {
@@ -27,7 +32,11 @@ const getUserById = (req, res, next) => User.findById(req.params.id)
 
 const createUser = (req, res, next) => {
   const {
-    name, about, avatar, email, password,
+    name,
+    about,
+    avatar,
+    email,
+    password,
   } = req.body;
   bcrypt
     .hash(password, 10)
@@ -40,7 +49,9 @@ const createUser = (req, res, next) => {
     }))
     .catch((err) => {
       if (err.name === 'MongoError' && err.code === 11000) {
-        throw new ConflictError({ message: 'Пользователь с таким email уже зарегистрирован' });
+        throw new ConflictError({
+          message: 'Пользователь с таким email уже зарегистрирован',
+        });
       } else next(err);
     })
     .then((user) => res.send({ message: `Пользователь c email ${user.email} успешно зарегистрирован` }))
@@ -48,14 +59,15 @@ const createUser = (req, res, next) => {
 };
 
 const login = (req, res, next) => {
-  const {
-    email, password,
-  } = req.body;
+  const { email, password } = req.body;
 
   return User.findUserByCredentials(email, password)
     .then((user) => {
-      const token = jwt.sign({ _id: user._id },
-        NODE_ENV === 'production' ? JWT_SECRET : 'very-secret-key', { expiresIn: '7d' });
+      const token = jwt.sign(
+        { _id: user._id },
+        NODE_ENV === 'production' ? JWT_SECRET : 'very-secret-key',
+        { expiresIn: '7d' },
+      );
       res.send({ token });
     })
     .catch((err) => {
@@ -65,8 +77,6 @@ const login = (req, res, next) => {
 };
 
 const getUserByToken = (req, res, next) => {
-  console.log(req.user, 'контроллеры');
-  console.log(req.user._id);
   User.findById(req.user._id)
     .then((user) => {
       if (!user) {
@@ -78,10 +88,52 @@ const getUserByToken = (req, res, next) => {
     .catch(next);
 };
 
+const setUserInfo = (req, res, next) => {
+  const { name, about } = req.body;
+  User.findByIdAndUpdate(
+    req.user._id,
+    { name, about },
+    {
+      new: true,
+      runValidators: true,
+    },
+  )
+    .then((user) => res.status(200).send(user))
+    .catch((err) => {
+      if (err.name === 'ValidationError') {
+        next(new BadReqErr({ message: 'Данные введены не корректно' }));
+      } else {
+        next(err);
+      }
+    });
+};
+
+const setUserAvatar = (req, res, next) => {
+  const { avatar } = req.body;
+  User.findByIdAndUpdate(
+    req.user._id,
+    { avatar },
+    {
+      new: true,
+      runValidators: true,
+    },
+  )
+    .then((user) => res.status(200).send(user))
+    .catch((err) => {
+      if (err.name === 'ValidationError') {
+        next(new BadReqErr({ message: 'Данные введены не корректно' }));
+      } else {
+        next(err);
+      }
+    });
+};
+
 module.exports = {
   getAllUsers,
   getUserById,
   getUserByToken,
   createUser,
   login,
+  setUserInfo,
+  setUserAvatar,
 };
