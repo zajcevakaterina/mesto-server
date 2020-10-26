@@ -49,12 +49,12 @@ const likeCard = (req, res, next) => {
   Card.findByIdAndUpdate(req.params.id,
     { $addToSet: { likes: req.user._id } },
     { new: true })
-    .then((likes) => {
-      if (!likes) {
-        throw new NotFoundErr({ message: 'К сожалению, такая карточка не найдена' });
-      } else {
-        res.status(200).send(likes);
+    .then((card) => res.send(card))
+    .catch((error) => {
+      if (!error.messageFormat) {
+        throw new NotFoundErr({ message: 'Карточка не найдена' });
       }
+      throw new ServerError();
     })
     .catch(next);
 };
@@ -63,12 +63,12 @@ const dislikeCard = (req, res, next) => {
   Card.findByIdAndUpdate(req.params.id,
     { $pull: { likes: req.user._id } },
     { new: true })
-    .then((likes) => {
-      if (!likes) {
-        throw new NotFoundErr({ message: 'К сожалению, такая карточка не найдена' });
-      } else {
-        res.send(likes);
+    .then((card) => res.send(card))
+    .catch((error) => {
+      if (!error.messageFormat) {
+        throw new NotFoundErr({ message: 'Карточка не найдена' });
       }
+      throw new ServerError();
     })
     .catch(next);
 };
