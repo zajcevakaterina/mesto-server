@@ -65,6 +65,8 @@ const login = (req, res, next) => {
 };
 
 const getUserByToken = (req, res, next) => {
+  console.log(req.user, 'контроллеры');
+  console.log(req.user._id);
   User.findById(req.user._id)
     .then((user) => {
       if (!user) {
