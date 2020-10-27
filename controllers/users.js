@@ -71,7 +71,7 @@ const login = (req, res, next) => {
       res.send({ token });
     })
     .catch((err) => {
-      throw new AuthErr({ message: err.message });
+      throw new AuthErr(err.message);
     })
     .catch(next);
 };
