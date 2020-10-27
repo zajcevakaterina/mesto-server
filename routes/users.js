@@ -1,5 +1,6 @@
 const usersRouter = require('express').Router();
 const { celebrate, Joi } = require('celebrate');
+const { isURL } = require('validator');
 
 const {
   getAllUsers,
@@ -11,14 +12,17 @@ const {
 
 usersRouter.patch('/users/me', celebrate({
   body: Joi.object().keys({
-    name: Joi.string().required().min(2).max(40),
-    about: Joi.string().required().min(2).max(40),
+    name: Joi.string().required().min(2).max(30),
+    about: Joi.string().required().min(2).max(30),
   }),
 }), setUserInfo);
 
 usersRouter.patch('/users/me/avatar', celebrate({
   body: Joi.object().keys({
-    avatar: Joi.string().required().pattern(/https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\\+~#=]+\.[a-zA-Z0-9()]+([-a-zA-Z0-9()@:%_\\+.~#?&/=#]*)/),
+    avatar: Joi.string().required().custom((value, helpers) => {
+      if (!isURL(value)) return helpers.error('К сожалению, ссылка не прошла валидацию');
+      return value;
+    }),
   }),
 }), setUserAvatar);
 
@@ -28,7 +32,7 @@ usersRouter.get('/users/me', getUserByToken);
 
 usersRouter.get('/users/:id', celebrate({
   params: Joi.object().keys({
-    id: Joi.string().required().hex(),
+    id: Joi.string().required().hex().length(24),
   }),
 }), getUserById);
 
