@@ -63,7 +63,6 @@ const login = (req, res, next) => {
 
   return User.findUserByCredentials(email, password)
     .then((user) => {
-      console.log(user);
       const token = jwt.sign(
         { _id: user._id },
         NODE_ENV === 'production' ? JWT_SECRET : 'very-secret-key',
@@ -72,7 +71,6 @@ const login = (req, res, next) => {
       res.send({ token });
     })
     .catch((err) => {
-      console.log(err);
       throw new AuthErr({ message: err.message });
     })
     .catch(next);
